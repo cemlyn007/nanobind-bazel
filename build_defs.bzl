@@ -29,6 +29,72 @@ NANOBIND_STATIC = [Label("@nanobind//:nanobind")]
 NANOBIND_SHARED = [Label("@nanobind//:nanobind_shared")]
 LIBNANOBIND = [Label("@nanobind//:libnanobind")]
 
+def _nanobind_stubgen_build_impl(ctx):
+    out = ctx.outputs.out
+
+    args = ctx.actions.args()
+    args.add("--module-file", ctx.file.module.path)
+    args.add("--output-file", out.path)
+    if ctx.attr.quiet:
+        args.add("--quiet")
+
+    ctx.actions.run(
+        executable = ctx.executable._stubgen_tool,
+        arguments = [args],
+        inputs = [ctx.file.module],
+        outputs = [out],
+        mnemonic = "NanobindStubgenBuild",
+        progress_message = "Generating nanobind stubs for {}".format(ctx.label.name),
+    )
+
+_nanobind_stubgen_build = rule(
+    implementation = _nanobind_stubgen_build_impl,
+    attrs = {
+        "module": attr.label(
+            allow_single_file = True,
+            mandatory = True,
+        ),
+        "out": attr.output(mandatory = True),
+        "quiet": attr.bool(default = True),
+        "_stubgen_tool": attr.label(
+            executable = True,
+            cfg = "exec",
+            default = Label("@nanobind_bazel//:stubgen_build_tool"),
+        ),
+    },
+)
+
+def nanobind_stubgen_build(
+        name,
+        module,
+        out,
+        quiet = True,
+        **kwargs):
+    """Build-time stub generation for a nanobind extension.
+
+    Unlike ``nanobind_stubgen`` (which creates a runnable tool), this rule
+    generates a declared output file during ``bazel build``.
+
+    Args:
+        name: str
+            Name of the Bazel target.
+        module: Label
+            Label of the extension shared library (for example ``:mymodule.so``).
+        out: str
+            Output ``.pyi`` file name.
+        quiet: bool, default True
+            Whether to suppress stubgen output.
+        **kwargs: Any
+            Additional keyword args forwarded to the underlying rule.
+    """
+    _nanobind_stubgen_build(
+        name = name,
+        module = module,
+        out = out,
+        quiet = quiet,
+        **kwargs
+    )
+
 def nanobind_extension(
         name,
         domain = "",

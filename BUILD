@@ -1,13 +1,26 @@
 load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "bool_flag", "string_flag")
+load("@rules_python//python:py_binary.bzl", "py_binary")
 
 licenses(["notice"])
 
 exports_files([
     "LICENSE",
     "pybind11_bazel.LICENSE",
+    "stubgen_build_wrapper.py",
     "stubgen_wrapper.py",
 ])
+
+py_binary(
+    name = "stubgen_build_tool",
+    srcs = ["stubgen_build_wrapper.py"],
+    main = "stubgen_build_wrapper.py",
+    visibility = ["//visibility:public"],
+    deps = [
+        "@nanobind//:stubgen",
+        "@pypi__typing_extensions//:lib",
+    ],
+)
 
 alias(
     name = "nanobind",
